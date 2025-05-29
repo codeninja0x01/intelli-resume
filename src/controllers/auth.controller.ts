@@ -74,10 +74,9 @@ export class AuthController {
   }
 
   // Sign out
-  async signOut(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async signOut(_req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const token = req.headers.authorization?.split(' ')[1] || '';
-      await authService.signOut(token);
+      await authService.signOut();
       
       const response: ApiResponse = {
         success: true,

@@ -80,7 +80,7 @@ app.use('/public', express.static('public', {
 }));
 
 // Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   const healthCheck: ApiResponse = {
     success: true,
     message: 'Server is running',
@@ -99,7 +99,7 @@ app.get('/health', (req: Request, res: Response) => {
 app.use('/api/auth', authRoutes);
 
 // API base route
-app.get('/api', (req: Request, res: Response) => {
+app.get('/api', (_req: Request, res: Response) => {
   const response: ApiResponse = {
     success: true,
     message: 'Welcome to Intelli Resume API',
@@ -125,7 +125,7 @@ app.use('*', (req: Request, res: Response) => {
 });
 
 // Global error handling middleware
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   // Log error
   console.error('Error:', {
     message: err.message,

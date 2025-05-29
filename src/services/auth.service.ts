@@ -88,7 +88,7 @@ export class AuthService {
   }
 
   // Sign out user
-  async signOut(token: string): Promise<void> {
+  async signOut(): Promise<void> {
     const { error } = await supabase.auth.signOut();
     if (error) {
       throw new Error(error.message);

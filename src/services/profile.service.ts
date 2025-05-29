@@ -1,5 +1,5 @@
 import { Profile } from '../models/Profile.model';
-import { CreateUserDto, UpdateUserDto, User } from '../types';
+import { UpdateUserDto, User } from '../types';
 
 export class ProfileService {
   // Create user profile
