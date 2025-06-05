@@ -1,5 +1,4 @@
 {
-  "snapshot": "snapshot-id",
   "user": "ubuntu",
   "install": "./.cursor/install.sh",
   "start": "sudo service docker start",
