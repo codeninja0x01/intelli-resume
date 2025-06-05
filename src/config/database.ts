@@ -1,6 +1,6 @@
 import { Sequelize } from 'sequelize-typescript';
 import { config } from './index';
-import { Profile } from '../models/Profile.model';
+import { Profile, Education, Experience, Skill, Language, Certification } from '../models';
 
 // Parse Supabase database URL
 const parseSupabaseUrl = (url: string) => {
@@ -59,7 +59,7 @@ export const sequelize = new Sequelize({
   },
   
   // Model configuration
-  models: [Profile],
+  models: [Profile, Certification, Education, Experience, Skill, Language],
   
   // Logging
   logging: config.nodeEnv === 'development' ? console.log : false,

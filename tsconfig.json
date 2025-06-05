@@ -28,13 +28,12 @@
     "baseUrl": "./src",
     "paths": {
       "@/*": ["*"],
-      "@/controllers/*": ["controllers/*"],
-      "@/services/*": ["services/*"],
-      "@/models/*": ["models/*"],
-      "@/middleware/*": ["middleware/*"],
-      "@/utils/*": ["utils/*"],
+      "@/modules/*": ["modules/*"],
+      "@/modules/cv/*": ["modules/cv/*"],
+      "@/modules/auth/*": ["modules/auth/*"],
+      "@/shared/*": ["shared/*"],
       "@/config/*": ["config/*"],
-      "@/types/*": ["types/*"]
+      "@/middleware/*": ["middleware/*"]
     }
   },
   "include": [
