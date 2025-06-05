@@ -1,92 +1,74 @@
-// Placeholder authService
+import api, { getApiBaseUrl } from './api'; // Import our configured Axios instance
+import type { User } from '../contexts/AuthContext'; // Reuse the User type
+
+// Interfaces based on your backend's DTOs
 interface LoginCredentials {
   email: string;
   password: string;
 }
 
-interface User {
+interface SignupData extends LoginCredentials {
   name: string;
-  email: string;
 }
 
-interface LoginResponse {
-  token: string;
+// Data shape for a successful authentication
+interface AuthSuccessData {
   user: User;
+  token: string;
+  refreshToken: string;
+  // other fields from your backend response can be added here
 }
 
-interface SignupData {
-    name: string;
-    email: string;
-    password: string;
-    // confirmPassword is typically handled client-side
+// Generic wrapper for all API responses from your backend
+interface ApiResponse<T> {
+    success: boolean;
+    message: string;
+    data: T;
 }
 
-interface ResetPasswordData {
-  token: string; // This would typically come from the URL
-  newPassword: string;
-  // confirmPassword is for client-side validation
-}
-
-export const authService = {
-  login: async (data: LoginCredentials): Promise<LoginResponse> => {
-    console.log('Login attempt with:', data);
-    // Simulate API call
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (data.email === 'test@example.com' && data.password === 'password') {
-          resolve({ token: 'fake-jwt-token', user: { name: 'Test User', email: data.email } });
-        } else {
-          reject(new Error('Invalid credentials'));
-        }
-      }, 1000);
-    });
-  },
-
-  signup: async (data: SignupData): Promise<LoginResponse> => { // Assuming signup also returns token and user
-    console.log('Signup attempt with:', data);
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (data.email && data.password && data.name) {
-          // Simulate new user creation
-          resolve({ token: 'new-fake-jwt-token', user: { name: data.name, email: data.email } });
-        } else {
-          reject(new Error('Missing required signup information'));
-        }
-      }, 1000);
-    });
-  },
-
-  forgotPassword: async (email: string): Promise<void> => {
-    console.log('Forgot password attempt for email:', email);
-    // Simulate API call
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Simulate success for any email for now, or specific ones like 'exists@example.com'
-        if (email) { 
-          console.log('Password reset email sent (simulated) to:', email);
-          resolve();
-        } else {
-          // This case should ideally be caught by form validation
-          reject(new Error('Email is required.'));
-        }
-      }, 1000);
-    });
-  },
-
-  resetPassword: async (data: ResetPasswordData): Promise<void> => {
-    console.log('Reset password attempt for token:', data.token, 'with new password.');
-    // Simulate API call
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (data.token === 'valid-reset-token' && data.newPassword) {
-          console.log('Password has been reset successfully (simulated).');
-          resolve();
-        } else if (data.token !== 'valid-reset-token') {
-          reject(new Error('Invalid or expired reset token.'));
-        } else {
-          reject(new Error('New password is required.'));
-        }
-      }, 1000);
-    });
+class AuthService {
+  async login(credentials: LoginCredentials): Promise<ApiResponse<AuthSuccessData>> {
+    const { data } = await api.post('/auth/signin', credentials);
+    return data;
   }
-}; 
+
+  async signup(signupData: SignupData): Promise<ApiResponse<{ user: User; requires_verification?: boolean }>> {
+    const { data } = await api.post('/auth/signup', signupData);
+    return data;
+  }
+
+  async logout(token: string): Promise<void> {
+    // It's good practice to notify the backend of logout for session invalidation
+    // Your backend's `signOut` takes an optional token, so we send it.
+    await api.post('/auth/signout', { token });
+  }
+
+  async forgotPassword(email: string): Promise<ApiResponse<null>> {
+    const { data } = await api.post('/auth/password/reset', { email });
+    return data;
+  }
+
+  async updatePassword(token: string, newPassword: string): Promise<ApiResponse<null>> {
+    const { data } = await api.post('/auth/password/update', { token, newPassword });
+    return data;
+  }
+
+  async refreshToken(refreshToken: string): Promise<ApiResponse<AuthSuccessData>> {
+    const { data } = await api.post('/auth/refresh', { refreshToken });
+    return data;
+  }
+
+  // This calls a protected route to get the current user's info
+  async validateSession(): Promise<{ user: User }> {
+    const { data } = await api.get('/auth/me'); // Assuming a /me or /profile endpoint
+    return data;
+  }
+
+  // Social login is handled by redirecting to the backend
+  getSocialLoginUrl(provider: 'google' | 'github'): string {
+    // Construct the full URL to the backend's social auth endpoint
+    return `${getApiBaseUrl()}/auth/${provider}`;
+  }
+}
+
+export const authService = new AuthService(); 
