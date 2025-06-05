@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
-import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { TextField, Button, Typography, Link, Box, CircularProgress, Alert, Divider } from '@mui/material';
 import { FaGoogle, FaGithub, FaLinkedin } from 'react-icons/fa';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
+import { authService } from '../../services/authService';
 
 import AuthLayout from '../../components/layout/AuthLayout';
 import AuthFormContainer from '../../components/ui/AuthFormContainer';
 import SocialButton from '../../components/ui/SocialButton';
-// import { authService } from '../../services/authService'; // No longer directly needed here
-import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
 
 interface LoginFormInputs {
   email: string;
@@ -17,48 +17,38 @@ interface LoginFormInputs {
 }
 
 const LoginPage: React.FC = () => {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormInputs>();
-  
-  const { login } = useAuth(); // Use login from AuthContext
+  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormInputs>();
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from?.pathname || "/dashboard"; // For redirecting after login
-
-  const [isLoading, setIsLoading] = useState(false); // Keep local loading for form submission visual feedback
+  const { login, isAuthenticated } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
+
+  // If user is already logged in, redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const onSubmit: SubmitHandler<LoginFormInputs> = async (data) => {
     setIsLoading(true);
     setServerError(null);
     try {
-      await login(data); // Call login from AuthContext
-      navigate(from, { replace: true }); // Navigate to intended page or dashboard
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
-      setServerError(errorMessage);
-      console.error('Login failed', error);
+      await login(data);
+      // On successful login, the AuthContext state will change,
+      // and the useEffect above will handle the redirect.
+      // We could also navigate here directly.
+      navigate('/dashboard', { replace: true });
+    } catch (error: any) {
+      setServerError(error?.response?.data?.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSocialLogin = async (provider: string) => {
-    setIsSocialLoading(provider);
-    setServerError(null);
-    console.log(`Attempting ${provider} login...`);
-    // TODO: Implement social login via AuthContext if needed
-    // await socialLogin(provider); 
-    setTimeout(() => {
-      console.log(`${provider} login flow completed (simulated).`);
-      setServerError(`Social login with ${provider} is not yet implemented in AuthContext.`);
-      setIsSocialLoading(null);
-      // navigate(from, { replace: true });
-    }, 1500);
+  const handleSocialLogin = (provider: 'google' | 'github') => {
+    // Redirect the user to the backend's social auth endpoint
+    window.location.href = authService.getSocialLoginUrl(provider);
   };
 
   const formVariants = {
@@ -88,7 +78,7 @@ const LoginPage: React.FC = () => {
             {...register('email', { required: 'Email is required' })}
             error={!!errors.email}
             helperText={errors.email?.message}
-            disabled={isLoading || !!isSocialLoading}
+            disabled={isLoading}
           />
         </motion.div>
 
@@ -101,7 +91,7 @@ const LoginPage: React.FC = () => {
             {...register('password', { required: 'Password is required' })}
             error={!!errors.password}
             helperText={errors.password?.message}
-            disabled={isLoading || !!isSocialLoading}
+            disabled={isLoading}
           />
         </motion.div>
 
@@ -117,7 +107,7 @@ const LoginPage: React.FC = () => {
             fullWidth
             variant="contained"
             color="primary"
-            disabled={isLoading || !!isSocialLoading}
+            disabled={isLoading}
             sx={{ mt: 2, py: 1.5 }}
           >
             {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
@@ -139,9 +129,9 @@ const LoginPage: React.FC = () => {
         <motion.div variants={itemVariants}>
           <SocialButton 
             icon={FaGoogle} 
-            onClick={() => handleSocialLogin('Google')} 
-            isLoading={isSocialLoading === 'Google'}
-            disabled={isLoading || !!isSocialLoading}
+            onClick={() => handleSocialLogin('google')} 
+            isLoading={isLoading}
+            disabled={isLoading}
           >
             Sign in with Google
           </SocialButton>
@@ -149,24 +139,14 @@ const LoginPage: React.FC = () => {
         <motion.div variants={itemVariants}>
           <SocialButton 
             icon={FaGithub} 
-            onClick={() => handleSocialLogin('GitHub')} 
-            isLoading={isSocialLoading === 'GitHub'}
-            disabled={isLoading || !!isSocialLoading}
+            onClick={() => handleSocialLogin('github')} 
+            isLoading={isLoading}
+            disabled={isLoading}
           >
             Sign in with GitHub
           </SocialButton>
         </motion.div>
-        <motion.div variants={itemVariants}>
-          <SocialButton 
-            icon={FaLinkedin} 
-            onClick={() => handleSocialLogin('LinkedIn')}
-            isLoading={isSocialLoading === 'LinkedIn'}
-            disabled={isLoading || !!isSocialLoading}
-          >
-            Sign in with LinkedIn
-          </SocialButton>
-        </motion.div>
-
+        
         <motion.div variants={itemVariants}>
           <Typography variant="body2" align="center" sx={{ mt: 2 }}>
             Don't have an account?{' '}

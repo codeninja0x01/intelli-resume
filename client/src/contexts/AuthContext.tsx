@@ -1,28 +1,26 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { authService } from '../services/authService'; // Adjust path as needed
+import { authService } from '../services/authService';
 
-// Define User and AuthState types
+// Define and export the User type. This should match the user object returned by your backend.
 export interface User {
-  id?: string; // Optional: if your backend provides an ID
-  name: string;
-  email: string;
-  // Add other user-specific fields if necessary
+  id: string;
+  email?: string;
+  role?: string;
+  // Add other properties your backend sends for the user, like 'full_name'
 }
 
+// Define the shape of the context state
 interface AuthState {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: any) => Promise<void>; // Replace 'any' with LoginCredentials from authService if preferred
-  signup: (signupData: any) => Promise<void>; // Replace 'any' with SignupData from authService
+  login: (credentials: any) => Promise<any>;
+  signup: (signupData: any) => Promise<any>;
   logout: () => void;
 }
 
-// Create the context with a default undefined value to ensure consumers are within a provider
 const AuthContext = createContext<AuthState | undefined>(undefined);
 
-// Custom hook to use the AuthContext
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -31,91 +29,82 @@ export const useAuth = () => {
   return context;
 };
 
-// AuthProvider component
 interface AuthProviderProps {
   children: ReactNode;
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('authToken'));
-  const [isLoading, setIsLoading] = useState(true); // Start with loading true to check token
+  const [isLoading, setIsLoading] = useState(true); // Start true to check session
 
+  // On initial load, check for a stored token and validate it with the backend
   useEffect(() => {
-    const validateToken = async () => {
+    const validateAndSetUser = async () => {
+      const token = localStorage.getItem('authToken');
       if (token) {
-        // TODO: Add a service call to validate token with backend if necessary
-        // For now, if token exists, assume it's valid and try to fetch user profile
-        // Or, if user data is stored in localStorage alongside token, retrieve it.
-        // This is a simplified version. A real app might decode the token or fetch user data.
         try {
-            // Placeholder: If your token contains user info or you have a /me endpoint
-            // For this example, if a token exists, we'll try to re-login or fetch user
-            // Let's assume the token itself is enough for now, or you stored user with token
-            const storedUser = localStorage.getItem('authUser');
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
-            } else if (token) {
-                // If only token is stored, you might need a /me endpoint
-                // For simplicity, we'll just say if a token exists, we are kind of authenticated
-                // but ideally, you'd fetch user details here.
-                // setUser({ name: 'User from Token', email: 'user@token.com'}); // Example
-            }
+          // Make a request to a protected backend route to get user info
+          const { user: validatedUser } = await authService.validateSession();
+          setUser(validatedUser);
         } catch (error) {
-            console.error("Failed to validate token or fetch user", error);
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('authUser');
-            setToken(null);
-            setUser(null);
+          console.error("Session validation failed:", error);
+          // Token is invalid or expired, clear it
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('authRefreshToken');
+          setUser(null);
         }
-      } 
+      }
       setIsLoading(false);
     };
-    validateToken();
-  }, [token]);
+
+    validateAndSetUser();
+  }, []);
+
+  // Helper to handle storing session data after a successful login/signup
+  const handleAuthSuccess = (authResponse: any) => {
+    // The API response has a 'data' property containing user and tokens
+    if (authResponse?.data?.user && authResponse?.data?.token) {
+      const { user, token, refreshToken } = authResponse.data;
+      setUser(user);
+      localStorage.setItem('authToken', token);
+      if (refreshToken) {
+        localStorage.setItem('authRefreshToken', refreshToken);
+      }
+    }
+  };
 
   const login = async (credentials: any) => {
-    setIsLoading(true);
-    try {
-      const response = await authService.login(credentials);
-      setToken(response.token);
-      setUser(response.user);
-      localStorage.setItem('authToken', response.token);
-      localStorage.setItem('authUser', JSON.stringify(response.user));
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-      throw error; // Re-throw to be caught by the calling component
-    }
+    const response = await authService.login(credentials);
+    handleAuthSuccess(response);
+    return response;
   };
 
   const signup = async (signupData: any) => {
-    setIsLoading(true);
-    try {
-      const response = await authService.signup(signupData);
-      setToken(response.token);
-      setUser(response.user);
-      localStorage.setItem('authToken', response.token);
-      localStorage.setItem('authUser', JSON.stringify(response.user));
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-      throw error;
-    }
+    // Based on your backend, signup returns a message and doesn't create a session
+    // until the user's email is verified. So we don't call handleAuthSuccess here.
+    const response = await authService.signup(signupData);
+    return response; // Return the full response so UI can show the verification message
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('authUser');
-    // Optionally, redirect to login page or notify backend
+  const logout = async () => {
+    const token = localStorage.getItem('authToken');
+    try {
+      if (token) {
+        await authService.logout(token);
+      }
+    } catch (error) {
+      console.error("Backend logout failed, proceeding with client-side logout.", error);
+    } finally {
+      // Always clear local state and storage
+      setUser(null);
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('authRefreshToken');
+    }
   };
 
   const value = {
     user,
-    token,
-    isAuthenticated: !!token && !!user, // Or just !!token if user object might not be immediately available
+    isAuthenticated: !!user,
     isLoading,
     login,
     signup,

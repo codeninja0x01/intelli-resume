@@ -1,14 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
-import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { TextField, Button, Typography, Link, Box, CircularProgress, Alert, Divider, Checkbox, FormControlLabel, LinearProgress } from '@mui/material';
-import { FaGoogle, FaGithub, FaLinkedin } from 'react-icons/fa';
+import { FaGoogle, FaGithub } from 'react-icons/fa';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
+import { authService } from '../../services/authService';
 
 import AuthLayout from '../../components/layout/AuthLayout';
 import AuthFormContainer from '../../components/ui/AuthFormContainer';
 import SocialButton from '../../components/ui/SocialButton';
-import { useAuth } from '../../contexts/AuthContext';
 
 interface SignupFormInputs {
   name: string;
@@ -19,21 +20,11 @@ interface SignupFormInputs {
 }
 
 const SignupPage: React.FC = () => {
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<SignupFormInputs>();
-  
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<SignupFormInputs>();
   const { signup } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const from = location.state?.from?.pathname || "/dashboard";
-
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
-  const [isSocialLoading, setIsSocialLoading] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const password = useRef({});
   password.current = watch("password", "");
@@ -41,29 +32,20 @@ const SignupPage: React.FC = () => {
   const onSubmit: SubmitHandler<SignupFormInputs> = async (data) => {
     setIsLoading(true);
     setServerError(null);
+    setSuccessMessage(null);
     try {
-      const { confirmPassword, agreeToTerms, ...actualSignupData } = data;
-      await signup(actualSignupData);
-      console.log('Signup successful from page');
-      navigate(from, { replace: true });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred.';
-      setServerError(errorMessage);
-      console.error('Signup failed from page', error);
+      const response = await signup(data);
+      // Your backend returns a message on successful signup
+      setSuccessMessage(response.message || 'Registration successful. Please check your email to confirm your account.');
+    } catch (error: any) {
+      setServerError(error?.response?.data?.message || 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSocialSignup = async (provider: string) => {
-    setIsSocialLoading(provider);
-    setServerError(null);
-    console.log(`Attempting ${provider} signup...`);
-    setTimeout(() => {
-      console.log(`${provider} signup flow completed (simulated).`);
-      setServerError(`Social signup with ${provider} is not yet implemented in AuthContext.`);
-      setIsSocialLoading(null);
-    }, 1500);
+  const handleSocialSignup = (provider: 'google' | 'github') => {
+    window.location.href = authService.getSocialLoginUrl(provider);
   };
   
   const getPasswordStrength = (pw: string) => {
@@ -90,136 +72,134 @@ const SignupPage: React.FC = () => {
   return (
     <AuthLayout title="Create Your IntelliResume Account">
       <AuthFormContainer onSubmit={handleSubmit(onSubmit)} variants={formVariants} initial="hidden" animate="visible">
-        <motion.div variants={itemVariants}>
-          <TextField
-            label="Full Name"
-            type="text"
-            fullWidth
-            required
-            {...register('name', { required: 'Name is required' })}
-            error={!!errors.name}
-            helperText={errors.name?.message}
-            disabled={isLoading || !!isSocialLoading}
-          />
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <TextField
-            label="Email Address"
-            type="email"
-            fullWidth
-            required
-            {...register('email', { 
-              required: 'Email is required', 
-              pattern: { value: /^\S+@\S+$/i, message: "Invalid email address" }
-            })}
-            error={!!errors.email}
-            helperText={errors.email?.message}
-            disabled={isLoading || !!isSocialLoading}
-          />
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <TextField
-            label="Password"
-            type="password"
-            fullWidth
-            required
-            {...register('password', { 
-              required: 'Password is required', 
-              minLength: { value: 8, message: "Password must be at least 8 characters" }
-            })}
-            error={!!errors.password}
-            helperText={errors.password?.message}
-            disabled={isLoading || !!isSocialLoading}
-          />
-           {watch("password", "") && (
-            <Box sx={{ mt: 1 }}>
-              <LinearProgress variant="determinate" value={(passwordStrength / 4) * 100} sx={{ height: '6px', borderRadius: '3px' }} />
-              <Typography variant="caption" color={passwordStrength < 2 ? 'error' : passwordStrength < 4 ? 'warning.main' : 'success.main' }>
-                {['Very Weak', 'Weak', 'Okay', 'Strong', 'Very Strong'][passwordStrength]}
-              </Typography>
-            </Box>
-          )}
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <TextField
-            label="Confirm Password"
-            type="password"
-            fullWidth
-            required
-            {...register('confirmPassword', { 
-              required: 'Please confirm your password', 
-              validate: value => value === password.current || "The passwords do not match"
-            })}
-            error={!!errors.confirmPassword}
-            helperText={errors.confirmPassword?.message}
-            disabled={isLoading || !!isSocialLoading}
-          />
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-            <FormControlLabel
-                control={<Checkbox {...register('agreeToTerms', { required: 'You must agree to the terms'})} color="primary" />}
-                label={<Typography variant="body2">I agree to the <Link href="/terms" target="_blank">Terms of Service</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>.</Typography>}
-            />
-            {errors.agreeToTerms && <Typography variant="caption" color="error">{errors.agreeToTerms.message}</Typography>}
-        </motion.div>
-
-        {serverError && (
+        {successMessage ? (
           <motion.div variants={itemVariants}>
-            <Alert severity="error" sx={{ width: '100%' }}>{serverError}</Alert>
+            <Alert severity="success">{successMessage}</Alert>
           </motion.div>
+        ) : (
+          <>
+            <motion.div variants={itemVariants}>
+              <TextField
+                label="Full Name"
+                type="text"
+                fullWidth
+                required
+                {...register('name', { required: 'Name is required' })}
+                error={!!errors.name}
+                helperText={errors.name?.message}
+                disabled={isLoading}
+              />
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <TextField
+                label="Email Address"
+                type="email"
+                fullWidth
+                required
+                {...register('email', { 
+                  required: 'Email is required', 
+                  pattern: { value: /^\S+@\S+$/i, message: "Invalid email address" }
+                })}
+                error={!!errors.email}
+                helperText={errors.email?.message}
+                disabled={isLoading}
+              />
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <TextField
+                label="Password"
+                type="password"
+                fullWidth
+                required
+                {...register('password', { 
+                  required: 'Password is required', 
+                  minLength: { value: 8, message: "Password must be at least 8 characters" }
+                })}
+                error={!!errors.password}
+                helperText={errors.password?.message}
+                disabled={isLoading}
+              />
+              {watch("password", "") && (
+                <Box sx={{ mt: 1 }}>
+                  <LinearProgress variant="determinate" value={(passwordStrength / 4) * 100} sx={{ height: '6px', borderRadius: '3px' }} />
+                  <Typography variant="caption" color={passwordStrength < 2 ? 'error' : passwordStrength < 4 ? 'warning.main' : 'success.main' }>
+                    {['Very Weak', 'Weak', 'Okay', 'Strong', 'Very Strong'][passwordStrength]}
+                  </Typography>
+                </Box>
+              )}
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <TextField
+                label="Confirm Password"
+                type="password"
+                fullWidth
+                required
+                {...register('confirmPassword', { 
+                  required: 'Please confirm your password', 
+                  validate: value => value === password.current || "The passwords do not match"
+                })}
+                error={!!errors.confirmPassword}
+                helperText={errors.confirmPassword?.message}
+                disabled={isLoading}
+              />
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+                <FormControlLabel
+                    control={<Checkbox {...register('agreeToTerms', { required: 'You must agree to the terms'})} color="primary" />}
+                    label={<Typography variant="body2">I agree to the <Link href="/terms" target="_blank">Terms of Service</Link> and <Link href="/privacy" target="_blank">Privacy Policy</Link>.</Typography>}
+                />
+                {errors.agreeToTerms && <Typography variant="caption" color="error">{errors.agreeToTerms.message}</Typography>}
+            </motion.div>
+
+            {serverError && (
+              <motion.div variants={itemVariants}>
+                <Alert severity="error" sx={{ width: '100%' }}>{serverError}</Alert>
+              </motion.div>
+            )}
+
+            <motion.div variants={itemVariants}>
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                color="primary"
+                disabled={isLoading}
+                sx={{ mt: 2, py: 1.5 }}
+              >
+                {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Sign Up'}
+              </Button>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+                <Divider sx={{ my: 2 }}>Or sign up with</Divider>
+            </motion.div>
+
+            <motion.div variants={itemVariants}>
+              <SocialButton 
+                icon={FaGoogle} 
+                onClick={() => handleSocialSignup('google')} 
+                isLoading={isLoading}
+                disabled={isLoading}
+              >
+                Sign up with Google
+              </SocialButton>
+            </motion.div>
+            <motion.div variants={itemVariants}>
+              <SocialButton 
+                icon={FaGithub} 
+                onClick={() => handleSocialSignup('github')} 
+                isLoading={isLoading}
+                disabled={isLoading}
+              >
+                Sign up with GitHub
+              </SocialButton>
+            </motion.div>
+          </>
         )}
-
-        <motion.div variants={itemVariants}>
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            color="primary"
-            disabled={isLoading || !!isSocialLoading}
-            sx={{ mt: 2, py: 1.5 }}
-          >
-            {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Sign Up'}
-          </Button>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-            <Divider sx={{ my: 2 }}>Or sign up with</Divider>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <SocialButton 
-            icon={FaGoogle} 
-            onClick={() => handleSocialSignup('Google')}
-            isLoading={isSocialLoading === 'Google'}
-            disabled={isLoading || !!isSocialLoading}
-          >
-            Sign up with Google
-          </SocialButton>
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <SocialButton 
-            icon={FaGithub} 
-            onClick={() => handleSocialSignup('GitHub')}
-            isLoading={isSocialLoading === 'GitHub'}
-            disabled={isLoading || !!isSocialLoading}
-          >
-            Sign up with GitHub
-          </SocialButton>
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <SocialButton 
-            icon={FaLinkedin} 
-            onClick={() => handleSocialSignup('LinkedIn')}
-            isLoading={isSocialLoading === 'LinkedIn'}
-            disabled={isLoading || !!isSocialLoading}
-          >
-            Sign up with LinkedIn
-          </SocialButton>
-        </motion.div>
 
         <motion.div variants={itemVariants}>
           <Typography variant="body2" align="center" sx={{ mt: 2 }}>
