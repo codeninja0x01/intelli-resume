@@ -1,3 +1,4 @@
 {
-  "agentCanUpdateSnapshot": false
+  "agentCanUpdateSnapshot": false,
+  "agentCanUpdateEnvironment": false
 }
