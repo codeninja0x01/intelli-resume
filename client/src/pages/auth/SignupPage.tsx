@@ -10,6 +10,7 @@ import { authService } from '../../services/authService';
 import AuthLayout from '../../components/layout/AuthLayout';
 import AuthFormContainer from '../../components/ui/AuthFormContainer';
 import SocialButton from '../../components/ui/SocialButton';
+import '../../components/ui/AnimatedBackground.css';
 
 interface SignupFormInputs {
   name: string;
@@ -71,6 +72,7 @@ const SignupPage: React.FC = () => {
 
   return (
     <AuthLayout title="Create Your IntelliResume Account">
+      <div className="animated-background"></div>
       <AuthFormContainer onSubmit={handleSubmit(onSubmit)} variants={formVariants} initial="hidden" animate="visible">
         {successMessage ? (
           <motion.div variants={itemVariants}>

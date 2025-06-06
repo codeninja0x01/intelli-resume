@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import AuthLayout from '../../components/layout/AuthLayout';
 import AuthFormContainer from '../../components/ui/AuthFormContainer';
 import { authService } from '../../services/authService'; // Placeholder service
+import '../../components/ui/AnimatedBackground.css';
 
 interface ResetPasswordFormInputs {
   newPassword: string;
@@ -84,6 +85,7 @@ const ResetPasswordPage: React.FC = () => {
 
   return (
     <AuthLayout title="Reset Your Password">
+      <div className="animated-background"></div>
       <AuthFormContainer onSubmit={handleSubmit(onSubmit)} variants={formVariants} initial="hidden" animate="visible">
         {!successMessage && (
           <>
