@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import AuthLayout from '../../components/layout/AuthLayout';
 import AuthFormContainer from '../../components/ui/AuthFormContainer';
 import { authService } from '../../services/authService'; // Placeholder service
+import '../../components/ui/AnimatedBackground.css';
 
 interface ForgotPasswordFormInputs {
   email: string;
@@ -50,6 +51,7 @@ const ForgotPasswordPage: React.FC = () => {
 
   return (
     <AuthLayout title="Forgot Your Password?">
+      <div className="animated-background"></div>
       <AuthFormContainer onSubmit={handleSubmit(onSubmit)} variants={formVariants} initial="hidden" animate="visible">
         <motion.div variants={itemVariants}>
             <Typography variant="body2" align="center" sx={{ mb: 2}}>
