@@ -1,54 +1,33 @@
-# React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Fuse React Versions
+## Available Versions
+- **Fuse React ViteJs** - Single Page Application (SPA)
+  - ViteJs offers a fast development experience with its instant server start and hot module replacement, making it ideal for SPAs where quick feedback and performance are crucial.
+- **Fuse React NextJs** - Server Side Rendering (SSR)
+  - NextJs excels in SSR by providing automatic static optimization and server-side rendering capabilities, which enhance SEO and initial load performance, making it perfect for dynamic web applications.
 
-Currently, two official plugins are available:
+## GitHub Branches
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| | **ViteJs** | **NextJs** |
+|---------|------|----------|
+| **Demo** | [`vitejs-demo`](https://github.com/withinpixels/fuse-react/tree/vitejs-demo) [🌐](https://fuse-react-vitejs-demo.fusetheme.com) | [`nextjs-demo`](https://github.com/withinpixels/fuse-react/tree/nextjs-demo) [🌐](https://fuse-react-nextjs-demo.fusetheme.com) |
+| **Skeleton** | [`vitejs-skeleton`](https://github.com/withinpixels/fuse-react/tree/vitejs-skeleton) [🌐](https://fuse-react-vitejs-skeleton.fusetheme.com) | [`nextjs-skeleton`](https://github.com/withinpixels/fuse-react/tree/nextjs-skeleton) [🌐](https://fuse-react-nextjs-skeleton.fusetheme.com) |
+| **Development Demo** | [`vitejs-demo-dev`](https://github.com/withinpixels/fuse-react/tree/vitejs-demo-dev) [🌐](https://fuse-react-vitejs-demo-dev.fusetheme.com) | [`nextjs-demo-dev`](https://github.com/withinpixels/fuse-react/tree/nextjs-demo-dev) [🌐](https://fuse-react-nextjs-demo-dev.fusetheme.com) |
+| **Development Skeleton** | [`vitejs-skeleton-dev`](https://github.com/withinpixels/fuse-react/tree/vitejs-skeleton-dev) [🌐](https://fuse-react-vitejs-skeleton-dev.fusetheme.com) | [`nextjs-skeleton-dev`](https://github.com/withinpixels/fuse-react/tree/nextjs-skeleton-dev) [🌐](https://fuse-react-nextjs-skeleton-dev.fusetheme.com) |
 
-## Expanding the ESLint configuration
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## CLI Reference Links
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+- [ViteJs CLI Documentation](https://vitejs.dev/guide/cli.html)
+ 
+- [NextJs CLI Documentation](https://nextjs.org/docs/api-reference/cli)
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## License
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- [License Information](https://themeforest.net/licenses/terms/regular)
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+## More
+
+- [Fuse Theme Official Website](https://fusetheme.com/)
+
+

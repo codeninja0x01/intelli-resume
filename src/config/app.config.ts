@@ -14,8 +14,12 @@ export const helmetOptions = {
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      // Allow connections to your Supabase project
+      connectSrc: ["'self'", `https://*.supabase.co`],
+      // Trust scripts from your own domain
       scriptSrc: ["'self'"],
+      // Add other sources as needed for styles, fonts, etc.
+      styleSrc: ["'self'", "'unsafe-inline'"], 
       imgSrc: ["'self'", "data:", "https:"],
     },
   },

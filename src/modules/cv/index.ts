@@ -19,6 +19,7 @@ export { certificationService } from './services/certification.service';
 // Controllers
 export { skillController } from './controllers/skill.controller';
 export { languageController } from './controllers/language.controller';
+export { profileController } from './controllers/profile.controller';
 export { experienceController } from './controllers/experience.controller';
 export { educationController } from './controllers/education.controller';
 export { certificationController } from './controllers/certification.controller';
@@ -42,4 +43,5 @@ export { default as skillRoutes } from './routes/skill.routes';
 export { default as languageRoutes } from './routes/language.routes';
 export { default as educationRoutes } from './routes/education.routes';
 export { default as experienceRoutes } from './routes/experience.routes';
-export { default as certificationRoutes } from './routes/certification.routes'; 
+export { default as certificationRoutes } from './routes/certification.routes';
+export { default as profileRoutes } from './routes/profile.routes';
