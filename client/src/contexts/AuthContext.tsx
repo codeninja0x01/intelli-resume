@@ -1,22 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { authService } from '../services/authService';
+import { supabase } from '@/config/supabaseClient';
+import type { Session, User } from '@supabase/supabase-js';
 
-// Define and export the User type. This should match the user object returned by your backend.
-export interface User {
-  id: string;
-  email?: string;
-  role?: string;
-  // Add other properties your backend sends for the user, like 'full_name'
-}
-
-// Define the shape of the context state
+// NEW: The context will now also provide an authError state and a way to clear it.
 interface AuthState {
+  session: Session | null;
   user: User | null;
-  isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: any) => Promise<any>;
-  signup: (signupData: any) => Promise<any>;
-  logout: () => void;
+  authError: string | null;
+  clearAuthError: () => void;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -34,82 +26,54 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Start true to check session
+  const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null); // NEW: State for auth errors
 
-  // On initial load, check for a stored token and validate it with the backend
   useEffect(() => {
-    const validateAndSetUser = async () => {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        try {
-          // Make a request to a protected backend route to get user info
-          const { user: validatedUser } = await authService.validateSession();
-          setUser(validatedUser);
-        } catch (error) {
-          console.error("Session validation failed:", error);
-          // Token is invalid or expired, clear it
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('authRefreshToken');
-          setUser(null);
-        }
-      }
-      setIsLoading(false);
-    };
+    setIsLoading(true);
 
-    validateAndSetUser();
+    // NEW: Check for OAuth errors in the URL hash on initial load.
+    // Supabase puts session info and errors in the hash fragment.
+    const hash = window.location.hash;
+    if (hash.includes('error=') && hash.includes('error_description=')) {
+      const params = new URLSearchParams(hash.substring(1)); // Remove the '#'
+      const errorDescription = params.get('error_description');
+      if (errorDescription) {
+        // Set the error so components can display it.
+        setAuthError(decodeURIComponent(errorDescription.replace(/\+/g, ' ')));
+        // Clean the URL to remove the error details, so it doesn't reappear on refresh.
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+      }
+    );
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  // Helper to handle storing session data after a successful login/signup
-  const handleAuthSuccess = (authResponse: any) => {
-    // The API response has a 'data' property containing user and tokens
-    if (authResponse?.data?.user && authResponse?.data?.token) {
-      const { user, token, refreshToken } = authResponse.data;
-      setUser(user);
-      localStorage.setItem('authToken', token);
-      if (refreshToken) {
-        localStorage.setItem('authRefreshToken', refreshToken);
-      }
-    }
-  };
+  const clearAuthError = () => setAuthError(null);
 
-  const login = async (credentials: any) => {
-    const response = await authService.login(credentials);
-    handleAuthSuccess(response);
-    return response;
-  };
+  const value = { session, user, isLoading, authError, clearAuthError };
 
-  const signup = async (signupData: any) => {
-    // Based on your backend, signup returns a message and doesn't create a session
-    // until the user's email is verified. So we don't call handleAuthSuccess here.
-    const response = await authService.signup(signupData);
-    return response; // Return the full response so UI can show the verification message
-  };
-
-  const logout = async () => {
-    const token = localStorage.getItem('authToken');
-    try {
-      if (token) {
-        await authService.logout(token);
-      }
-    } catch (error) {
-      console.error("Backend logout failed, proceeding with client-side logout.", error);
-    } finally {
-      // Always clear local state and storage
-      setUser(null);
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('authRefreshToken');
-    }
-  };
-
-  const value = {
-    user,
-    isAuthenticated: !!user,
-    isLoading,
-    login,
-    signup,
-    logout,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}; 
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};

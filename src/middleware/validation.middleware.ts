@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ValidationChain, validationResult, matchedData } from 'express-validator';
+import { ValidationChain, validationResult, matchedData, ValidationError, Result } from 'express-validator';
 import createError from 'http-errors';
 
 export class ValidationMiddleware {
@@ -7,22 +7,20 @@ export class ValidationMiddleware {
   static validate(validations: ValidationChain[]) {
     return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
       try {
-        // Run all validations in parallel
         await Promise.all(validations.map(validation => validation.run(req)));
 
-        // Check for validation errors
-        const errors = validationResult(req);
-        
+        const errors: Result<ValidationError> = validationResult(req);
         if (!errors.isEmpty()) {
+          // Use the refactored error formatter
           const formattedErrors = ValidationMiddleware.formatErrors(errors.array());
           
           throw createError(400, 'Validation failed', {
             code: 'VALIDATION_FAILED',
+            // Attach the simplified error object to the details property
             details: formattedErrors,
           });
         }
 
-        // Extract only validated and sanitized data
         req.validatedData = matchedData(req);
         next();
       } catch (error) {
@@ -31,23 +29,23 @@ export class ValidationMiddleware {
     };
   }
 
-  // Format validation errors for better readability
-  private static formatErrors(errors: any[]): any {
-    const formattedErrors: Record<string, string[]> = {};
-    
+  /**
+   * Formats validation errors into a simple key-value pair object.
+   * From: { "fieldErrors": { "email": ["Invalid email"] } }
+   * To:   { "email": "Invalid email" }
+   * This is often easier for frontend forms to consume.
+   * @param errors The array of validation errors from express-validator.
+   * @returns A simplified error object.
+   */
+  private static formatErrors(errors: ValidationError[]): Record<string, string> {
+    const formattedErrors: Record<string, string> = {};
     errors.forEach(error => {
-      const field = error.path || error.param || 'unknown';
-      if (!formattedErrors[field]) {
-        formattedErrors[field] = [];
+      // Only add the first error message for a given field
+      if (error.type === 'field' && !formattedErrors[error.path]) {
+        formattedErrors[error.path] = error.msg;
       }
-      formattedErrors[field].push(error.msg);
     });
-
-    return {
-      fieldErrors: formattedErrors,
-      errorCount: errors.length,
-      summary: errors.map(error => error.msg).join(', '),
-    };
+    return formattedErrors;
   }
 
   // Conditional validation middleware

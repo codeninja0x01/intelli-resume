@@ -1,36 +1,28 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Box, CircularProgress } from '@mui/material';
 
 const ProtectedRoute: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { session, isLoading } = useAuth(); // We now check for the session object
   const location = useLocation();
 
+  // 1. While the AuthContext is loading the session, show a spinner.
+  //    This prevents any premature redirects.
   if (isLoading) {
-    // While the session is being validated on initial load, show a spinner.
-    // This is the key change that prevents the premature redirect.
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-        }}
-      >
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <CircularProgress />
       </Box>
     );
   }
 
-  if (!isAuthenticated) {
-    // After loading is complete, if the user is not authenticated,
-    // redirect them to the login page.
+  // 2. After loading, if there is no session, redirect to login.
+  if (!session) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If loading is complete and the user is authenticated, render the page.
+  // 3. If loading is done and there is a session, render the requested page.
   return <Outlet />;
 };
 

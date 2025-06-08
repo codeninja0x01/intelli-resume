@@ -2,7 +2,6 @@ import { Router } from 'express';
 
 // Import all route modules
 import apiRoutes from './api.routes';
-import authRoutes from '@/modules/auth/routes/auth.routes';
 import certificationRoutes from '@/modules/cv/routes/certification.routes';
 import educationRoutes from '@/modules/cv/routes/education.routes';
 import experienceRoutes from '@/modules/cv/routes/experience.routes';
@@ -27,7 +26,6 @@ router.get('/auth/callback', (req, res) => {
 // Mount routes
 router.use('/health', healthRoutes);
 router.use('/api', apiRoutes);
-router.use('/api/auth', authRoutes);
 router.use('/api/certifications', certificationRoutes);
 router.use('/api/education', educationRoutes);
 router.use('/api/experiences', experienceRoutes);
