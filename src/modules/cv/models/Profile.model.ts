@@ -212,6 +212,13 @@ export class Profile extends Model {
   })
   role!: 'user' | 'admin';
 
+  @Default(true)
+  @Column({
+    type: DataType.BOOLEAN,
+    defaultValue: true,
+  })
+  isFirstTimeUser!: boolean;
+
   @CreatedAt
   @Column({
     type: DataType.DATE,
@@ -248,6 +255,16 @@ export class Profile extends Model {
     return this.role === 'admin';
   }
 
+  // Check if user needs onboarding
+  needsOnboarding(): boolean {
+    return this.isFirstTimeUser;
+  }
+
+  // Mark onboarding as completed
+  async completeOnboarding(): Promise<Profile> {
+    return this.update({ isFirstTimeUser: false });
+  }
+
   // Update profile data
   async updateProfile(data: {
     firstName?: string;
@@ -264,6 +281,7 @@ export class Profile extends Model {
     portfolioUrl?: string;
     profilePictureUrl?: string;
     role?: 'user' | 'admin';
+    isFirstTimeUser?: boolean;
   }): Promise<Profile> {
     return this.update(data);
   }
