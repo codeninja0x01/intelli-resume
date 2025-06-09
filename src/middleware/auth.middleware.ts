@@ -10,6 +10,12 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     email: string;
     role: 'user' | 'admin';
+    user_metadata?: {
+      [key: string]: any;
+      firstName: string;
+      lastName: string;
+      profilePictureUrl: string;
+    };
   };
 }
 
@@ -66,6 +72,7 @@ const attachUserToRequest = async (req: Request, supabaseUser: any): Promise<voi
     id: supabaseUser.id,
     email: supabaseUser.email || '',
     role: profile?.role || 'user', // Default to 'user' if profile not found
+    user_metadata: supabaseUser.user_metadata || {}
   };
 };
 

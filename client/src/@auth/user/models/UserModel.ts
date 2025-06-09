@@ -9,11 +9,20 @@ function UserModel(data?: PartialDeep<User>): User {
 	data = data || {};
 
 	return _.defaults(data, {
-		id: null,
-		role: null, // guest
-		displayName: null,
-		photoURL: '',
+		id: '',
 		email: '',
+		firstName: '',
+		lastName: '',
+		name: '',
+		displayName: '',
+		tokenBalance: 0,
+		role: 'user',
+		isFirstTimeUser: true,
+		createdAt: new Date().toISOString(),
+		updatedAt: new Date().toISOString(),
+		profilePictureUrl: '',
+		avatar_url: '',
+		photoURL: '', // alias for compatibility
 		shortcuts: [],
 		settings: {},
 		loginRedirectUrl: '/'

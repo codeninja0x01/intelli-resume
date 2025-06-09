@@ -13,6 +13,7 @@ import MainThemeProvider from '../contexts/MainThemeProvider';
 import store from '@/store/store';
 import routes from '@/configs/routesConfig';
 import AppContext from '@/contexts/AppContext';
+import OnboardingRedirect from '@/components/onboarding/OnboardingRedirect';
 
 /**
  * The main App component.
@@ -48,7 +49,10 @@ function App() {
 												containerRoot: 'bottom-0 right-0 mb-13 md:mb-17 mr-2 lg:mr-20 z-99'
 											}}
 										>
-											<FuseLayout layouts={themeLayouts} />
+											{/* Onboarding Redirect for first-time users */}
+											<OnboardingRedirect>
+												<FuseLayout layouts={themeLayouts} />
+											</OnboardingRedirect>
 										</SnackbarProvider>
 									</MainThemeProvider>
 								</I18nProvider>
