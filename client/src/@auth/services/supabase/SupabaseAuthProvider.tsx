@@ -20,7 +20,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useImperativeHandle } from 'react';
 import { FuseAuthProviderComponentProps, FuseAuthProviderState } from '@fuse/core/FuseAuthProvider/types/FuseAuthTypes';
-import { authCreateDbUser, authGetDbUserByEmail, authUpdateDbUser } from '@auth/authApi';
+import { authCreateDbUser, authGetDbUserByEmail, authUpdateDbUser, authGetCurrentProfile, syncProfile } from '@auth/authApi';
 import { PartialDeep } from 'type-fest';
 import { User } from '@auth/user';
 import { supabase } from './supabaseAuthConfig';
@@ -69,7 +69,7 @@ function SupabaseAuthProvider(props: FuseAuthProviderComponentProps) {
 			}
 
 			if (session?.user) {
-				await fetchAndSetUser(session.user.email);
+				await fetchAndSetUser(session.user.email, session);
 			} else {
 				setAuthState({
 					authStatus: 'unauthenticated',
@@ -86,7 +86,7 @@ function SupabaseAuthProvider(props: FuseAuthProviderComponentProps) {
 			console.log('Supabase auth state changed:', event, session);
 
 			if (event === 'SIGNED_IN' && session?.user) {
-				await fetchAndSetUser(session.user.email);
+				await fetchAndSetUser(session.user.email, session);
 			} else if (event === 'SIGNED_OUT') {
 				setAuthState({
 					authStatus: 'unauthenticated',
@@ -94,7 +94,7 @@ function SupabaseAuthProvider(props: FuseAuthProviderComponentProps) {
 					user: null
 				});
 			} else if (event === 'TOKEN_REFRESHED' && session?.user) {
-				await fetchAndSetUser(session.user.email);
+				await fetchAndSetUser(session.user.email, session);
 			}
 		});
 
@@ -110,81 +110,118 @@ function SupabaseAuthProvider(props: FuseAuthProviderComponentProps) {
 	 * Fetch user data from database and set auth state
 	 * 👤 User profile data comes from your backend API
 	 */
-	const fetchAndSetUser = async (email: string) => {
-		console.log('🔍 fetchAndSetUser called with email:', email);
+	const fetchAndSetUser = async (email?: string, session?: any) => {
+		console.log('🔍 fetchAndSetUser called');
 		
 		try {
-			// Fetch user profile data from your backend (not Supabase)
-			console.log('📡 Fetching user from backend...');
-			const userResponse = await authGetDbUserByEmail(email);
+			await tryFetchExistingUser(session);
+		} catch (error) {
+			console.error('❌ User not found, attempting to create:', error);
+			await tryCreateNewUser(session);
+		}
+	};
+
+	/**
+	 * Attempt to fetch existing user from backend using auth token
+	 */
+	const tryFetchExistingUser = async (passedSession?: any) => {
+		console.log('📡 Fetching current user profile from backend...');
+		
+		try {
+			let session = passedSession;
 			
-			if (!userResponse.ok) {
-				throw new Error(`Failed to fetch user: ${userResponse.status} ${userResponse.statusText}`);
+			// Only fetch session if not passed
+			if (!session) {
+				console.log('🔄 About to call supabase.auth.getSession()...');
+				const { data: { session: fetchedSession }, error } = await supabase.auth.getSession();
+				console.log('✅ getSession() completed', { hasSession: !!fetchedSession, error });
+				
+				if (error) {
+					console.error('❌ Supabase getSession error:', error);
+					throw new Error(`Supabase session error: ${error.message}`);
+				}
+				session = fetchedSession;
+			} else {
+				console.log('📋 Using passed session data');
 			}
 			
-			const userDbData = (await userResponse.json()) as User;
+			console.log('🔍 Session data:', { 
+				hasSession: !!session, 
+				hasAccessToken: !!session?.access_token,
+				sessionData: session ? { ...session, access_token: session.access_token ? '[REDACTED]' : null } : null 
+			});
+			
+			if (!session?.access_token) {
+				console.error('❌ No valid session found - throwing error');
+				throw new Error('No valid session found');
+			}
+
+			console.log('🚀 Calling authGetCurrentProfile...');
+			const userDbData = await authGetCurrentProfile(session.access_token);
 			console.log('✅ User found in backend:', userDbData);
 
-			setAuthState({
-				user: userDbData,
-				isAuthenticated: true,
-				authStatus: 'authenticated'
-			});
-			console.log('✅ Auth state set to authenticated');
+			setAuthenticatedState(userDbData);
 		} catch (error) {
-			console.error('❌ Error fetching user data:', error);
-			
-			// If user data doesn't exist in db, create a new user record
-			try {
-				console.log('🔧 Creating new user in backend...');
-				const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-				
-				if (supabaseUser) {
-					console.log('📝 Supabase user data:', {
-						email: supabaseUser.email,
-						metadata: supabaseUser.user_metadata
-					});
-
-					const newUserPayload = {
-						email: supabaseUser.email,
-						role: ['user'],
-						displayName: supabaseUser.user_metadata?.display_name || supabaseUser.email?.split('@')[0] || 'User',
-						photoURL: supabaseUser.user_metadata?.avatar_url
-					};
-					console.log('📤 Creating user with payload:', newUserPayload);
-
-					const newUserResponse = await authCreateDbUser(newUserPayload);
-					
-					if (!newUserResponse.ok) {
-						throw new Error(`Failed to create user: ${newUserResponse.status} ${newUserResponse.statusText}`);
-					}
-					
-					const userDbData = (await newUserResponse.json()) as User;
-					console.log('✅ User created in backend:', userDbData);
-					
-					setAuthState({
-						user: userDbData,
-						isAuthenticated: true,
-						authStatus: 'authenticated'
-					});
-					console.log('✅ Auth state set to authenticated for new user');
-				} else {
-					console.error('❌ No Supabase user found');
-					setAuthState({
-						authStatus: 'unauthenticated',
-						isAuthenticated: false,
-						user: null
-					});
-				}
-			} catch (createError) {
-				console.error('❌ Error creating user:', createError);
-				setAuthState({
-					authStatus: 'unauthenticated',
-					isAuthenticated: false,
-					user: null
-				});
-			}
+			console.error('❌ Error in tryFetchExistingUser:', error);
+			throw error;
 		}
+	};
+
+	/**
+	 * Attempt to create new user profile
+	 */
+	const tryCreateNewUser = async (passedSession?: any) => {
+		try {
+			console.log('🔧 Creating new user in backend...');
+			
+			let session = passedSession;
+			
+			// Only fetch session if not passed
+			if (!session) {
+				const { data: { session: fetchedSession } } = await supabase.auth.getSession();
+				session = fetchedSession;
+			}
+			
+			if (!session?.access_token || !session.user) {
+				throw new Error('No valid session found');
+			}
+
+			console.log('📝 Supabase user data:', {
+				email: session.user.email,
+				metadata: session.user.user_metadata
+			});
+
+			const userDbData = await syncProfile(session.access_token);
+			console.log('✅ User created in backend:', userDbData);
+			
+			setAuthenticatedState(userDbData);
+		} catch (createError) {
+			console.error('❌ Error creating user:', createError);
+			setUnauthenticatedState();
+		}
+	};
+
+	/**
+	 * Set authenticated state with user data
+	 */
+	const setAuthenticatedState = (user: User) => {
+		setAuthState({
+			user,
+			isAuthenticated: true,
+			authStatus: 'authenticated'
+		});
+		console.log('✅ Auth state set to authenticated');
+	};
+
+	/**
+	 * Set unauthenticated state
+	 */
+	const setUnauthenticatedState = () => {
+		setAuthState({
+			authStatus: 'unauthenticated',
+			isAuthenticated: false,
+			user: null
+		});
 	};
 
 	/**
