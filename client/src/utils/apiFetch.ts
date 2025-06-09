@@ -1,7 +1,7 @@
-const apiUrl = new URL((import.meta?.env?.VITE_API_BASE_URL as string) || 'http://localhost:3000');
+const apiUrl = new URL((import.meta?.env?.VITE_API_BASE_URL as string) || 'http://localhost:8080');
 const devApiBaseHost = apiUrl.hostname;
-const PORT = Number(import.meta.env.VITE_PORT) || 3000;
-const devApiBaseUrl = `${apiUrl.protocol}//${devApiBaseHost}:${PORT}`;
+const API_PORT = Number(import.meta.env.VITE_API_PORT) || 8080;
+const devApiBaseUrl = `${apiUrl.protocol}//${devApiBaseHost}:${API_PORT}`;
 
 export const API_BASE_URL = import.meta.env.DEV ? devApiBaseUrl : (import.meta.env.VITE_API_BASE_URL as string) || '/';
 

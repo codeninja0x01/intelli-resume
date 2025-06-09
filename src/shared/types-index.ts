@@ -51,6 +51,7 @@ export interface User {
   profilePictureUrl?: string;
   avatar_url?: string; // backward compatibility alias for profilePictureUrl
   role: 'admin' | 'user';
+  isFirstTimeUser: boolean; // Track if user needs onboarding
   createdAt: Date;
   updatedAt: Date;
 }

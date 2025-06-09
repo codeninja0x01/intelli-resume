@@ -37,6 +37,7 @@ export * from './types/language.types';
 export * from './types/education.types';
 export * from './types/experience.types';
 export * from './types/certification.types';
+export * from './types/profile.types';
 
 // Routes
 export { default as skillRoutes } from './routes/skill.routes';

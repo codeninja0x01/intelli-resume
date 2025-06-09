@@ -1,61 +1,76 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import useNavigate from '@fuse/hooks/useNavigate';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import CircularProgress from '@mui/material/CircularProgress';
-import { supabase } from '@auth/services/supabase/supabaseAuthConfig';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Button from '@mui/material/Button';
+import ErrorOutline from '@mui/icons-material/ErrorOutline';
 
 /**
- * OAuth callback page that handles the redirect from social providers
+ * OAuth callback page that handles the redirect from social providers.
+ * It displays a loading spinner or an error message. The actual redirection
+ * on success is handled globally by SupabaseAuthProvider.
  */
 function AuthCallbackPage() {
 	const navigate = useNavigate();
+	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		const handleAuthCallback = async () => {
-			try {
-				// Check current session (SupabaseAuthProvider handles auth state changes globally)
-				const { data: { session }, error } = await supabase.auth.getSession();
-				
-				if (error) {
-					console.error('Auth callback error:', error);
-					navigate('/sign-in?error=oauth_error');
-					return;
-				}
-
-				if (session?.user) {
-					// User successfully authenticated, redirect to dashboard
-					console.log('Auth callback - user authenticated, redirecting to dashboard');
-					navigate('/dashboards/project');
-				} else {
-					// No session yet, wait for SupabaseAuthProvider to process auth state
-					// If no session after 3 seconds, redirect to sign-in
-					console.log('Auth callback - no session yet, waiting...');
-					setTimeout(() => {
-						// Check one more time before redirecting to sign-in
-						supabase.auth.getSession().then(({ data: { session } }) => {
-							if (session?.user) {
-								navigate('/dashboards/project');
-							} else {
-								navigate('/sign-in');
-							}
-						});
-					}, 3000);
-				}
-			} catch (error) {
-				console.error('Error handling auth callback:', error);
-				navigate('/sign-in?error=callback_error');
-			}
+		/**
+		 * Checks the URL hash for an 'error_description' parameter provided on OAuth failure.
+		 */
+		const getErrorDescriptionFromUrl = () => {
+			const hash = window.location.hash;
+			if (!hash) return null;
+			const params = new URLSearchParams(hash.substring(1)); // Remove '#'
+			return params.get('error_description');
 		};
 
-		// Small delay to let URL processing complete
-		const timer = setTimeout(handleAuthCallback, 500);
-		
-		return () => clearTimeout(timer);
-	}, [navigate]);
+		const errorDescription = getErrorDescriptionFromUrl();
 
+		if (errorDescription) {
+			setError(decodeURIComponent(errorDescription.replace(/\+/g, ' ')));
+		}
+		// NOTE: There is no success handling here.
+		// The global SupabaseAuthProvider is responsible for detecting the SIGNED_IN
+		// event and managing the redirection to the dashboard, which is more reliable
+		// and prevents a delay on this page.
+	}, []);
+
+	// Render an error message UI if an error has occurred.
+	if (error) {
+		return (
+			<Box
+				className="flex flex-col flex-auto items-center justify-center p-4 sm:p-24"
+				sx={{ backgroundColor: 'background.default' }}
+			>
+				<Card className="w-full max-w-md shadow-lg rounded-lg">
+					<CardContent className="flex flex-col items-center justify-center p-24 text-center">
+						<ErrorOutline color="error" className="mb-16" style={{ fontSize: 64 }} />
+						<Typography variant="h5" className="mb-16 font-semibold">
+							Authentication Failed
+						</Typography>
+						<Typography variant="body1" color="text.secondary" className="mb-24">
+							{error}
+						</Typography>
+						<Button
+							variant="contained"
+							color="secondary"
+							onClick={() => navigate('/sign-in')}
+						>
+							Back to Sign In
+						</Button>
+					</CardContent>
+				</Card>
+			</Box>
+		);
+	}
+
+	// Render the loading UI while waiting for the global provider to redirect.
 	return (
-		<Box 
+		<Box
 			className="flex h-screen items-center justify-center bg-gray-50"
 			sx={{ backgroundColor: 'background.default' }}
 		>
@@ -72,4 +87,4 @@ function AuthCallbackPage() {
 	);
 }
 
-export default AuthCallbackPage; 
+export default AuthCallbackPage;

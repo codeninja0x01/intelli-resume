@@ -37,6 +37,7 @@ export default defineConfig({
 		port: 3000
 	},
 	define: {
+		'import.meta.env.VITE_API_PORT': JSON.stringify(process.env.API_PORT || 8080),
 		'import.meta.env.VITE_PORT': JSON.stringify(process.env.PORT || 3000),
 		global: 'window'
 	},
